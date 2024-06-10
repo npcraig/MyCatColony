@@ -18,6 +18,9 @@ BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GREY = (128, 128, 128)
+YELLOW = (255, 255, 0)
+LIGHT_BLUE = (173, 216, 230)
 BUTTON_COLOR = (100, 100, 200)
 BUTTON_TEXT_COLOR = WHITE
 
@@ -58,6 +61,36 @@ current_day = 1
 current_year = 2024
 day_length = 2400  # Total number of ticks in a day
 time_of_day = 0  # 0 to 2399, where 0-1199 is day and 1200-2399 is night
+
+# Weather particles
+snowflakes = []
+raindrops = []
+
+def create_snowflakes(num):
+    for _ in range(num):
+        x = random.randint(0, SCREEN_WIDTH)
+        y = random.randint(-SCREEN_HEIGHT, 0)
+        snowflakes.append([x, y])
+
+def create_raindrops(num):
+    for _ in range(num):
+        x = random.randint(0, SCREEN_WIDTH)
+        y = random.randint(-SCREEN_HEIGHT, 0)
+        raindrops.append([x, y])
+
+def update_snowflakes():
+    for flake in snowflakes:
+        flake[1] += 1
+        if flake[1] > SCREEN_HEIGHT:
+            flake[1] = random.randint(-SCREEN_HEIGHT, 0)
+            flake[0] = random.randint(0, SCREEN_WIDTH)
+
+def update_raindrops():
+    for drop in raindrops:
+        drop[1] += 5
+        if drop[1] > SCREEN_HEIGHT:
+            drop[1] = random.randint(-SCREEN_HEIGHT, 0)
+            drop[0] = random.randint(0, SCREEN_WIDTH)
 
 # Define Cat sprite with personalities
 class Cat(pygame.sprite.Sprite):
@@ -128,7 +161,8 @@ class Cat(pygame.sprite.Sprite):
 
     def heal(self):
         self.health += 20
-        if self.health > 100: self.health = 100
+        if self.health > 100:
+            self.health = 100
 
     def find_closest_shelter(self):
         min_dist = float('inf')
@@ -233,6 +267,10 @@ for _ in range(initial_cats):
     all_sprites.add(cat)
     cats.add(cat)
 
+# Initialize snowflakes and raindrops
+create_snowflakes(100)
+create_raindrops(100)
+
 # Main game loop
 running = True
 paused = False
@@ -327,8 +365,37 @@ while running:
                 if current_month_index == 0:
                     current_year += 1
 
+        # Update snowflakes and raindrops
+        if current_weather == "Snow Storm":
+            update_snowflakes()
+        elif current_weather == "Rainy":
+            update_raindrops()
+
     # Clear the screen
     screen.fill(WHITE)
+
+    # Draw weather effects
+    if current_weather == "Sunny":
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(128)
+        overlay.fill(YELLOW)
+        screen.blit(overlay, (0, 0))
+    elif current_weather == "Cloudy":
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(128)
+        overlay.fill(GREY)
+        screen.blit(overlay, (0, 0))
+    elif current_weather == "Rainy":
+        for drop in raindrops:
+            pygame.draw.line(screen, LIGHT_BLUE, (drop[0], drop[1]), (drop[0], drop[1] + 5), 1)
+    elif current_weather == "Snow Storm":
+        for flake in snowflakes:
+            pygame.draw.circle(screen, WHITE, (flake[0], flake[1]), 3)
+    elif current_weather == "Heat Wave":
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        overlay.set_alpha(128)
+        overlay.fill(RED)
+        screen.blit(overlay, (0, 0))
 
     # Draw all sprites
     all_sprites.draw(screen)
