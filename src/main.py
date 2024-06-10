@@ -12,6 +12,7 @@ from ui.buttons import draw_button, check_button_click
 from random_events import generate_random_event, handle_random_event
 from utils.sprite_loader import load_cat_sprites, load_shelter_sprites
 from inventory import Inventory
+from game_save_load import save_game, load_game
 from math import sin, cos, radians
 
 # Initialize Pygame
@@ -92,13 +93,15 @@ button_rects = [
     pygame.Rect(460, top_margin + button_height + button_spacing, button_width, button_height),
     pygame.Rect(680, top_margin + button_height + button_spacing, button_width, button_height),
     pygame.Rect(900, top_margin + button_height + button_spacing, button_width, button_height),
-    pygame.Rect(1120, top_margin, button_width, button_height)  # Button for changing time speed
+    pygame.Rect(1120, top_margin, button_width, button_height),  # Button for changing time speed
+    pygame.Rect(1340, top_margin, button_width, button_height),  # Button for saving game
+    pygame.Rect(1560, top_margin, button_width, button_height)   # Button for loading game
 ]
 
 # Assign buttons to variables for easy access
 (feed_button_rect, water_button_rect, shelter_button_rect, clean_button_rect, heal_button_rect, 
  buy_food_button_rect, buy_water_button_rect, gather_resources_button_rect, 
- earn_money_button_rect, pause_button_rect, time_speed_button_rect) = button_rects
+ earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect) = button_rects
 
 # Random event timer
 event_timer = 0
@@ -174,6 +177,10 @@ while running:
             elif check_button_click(time_speed_button_rect, mouse_pos):
                 current_time_speed_index = (current_time_speed_index + 1) % len(time_speeds)
                 time_speed = time_speeds[current_time_speed_index]
+            elif check_button_click(save_button_rect, mouse_pos):
+                save_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager)
+            elif check_button_click(load_button_rect, mouse_pos):
+                load_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager, cat_images, shelter_images, food_image, water_image)
             else:
                 # Check for clicks on cats
                 for cat in cats:
@@ -218,7 +225,7 @@ while running:
     # Draw UI buttons
     button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
                      "Buy Food", "Buy Water", "Gather Resources", "Earn Money", 
-                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x"]
+                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game"]
 
     for rect, label in zip(button_rects, button_labels):
         draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
