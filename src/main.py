@@ -4,6 +4,9 @@ from settings import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BUTTON_COLOR, BUTTON_TE
 from weather import WeatherManager
 from sprites.cat import Cat
 from sprites.shelter import Shelter
+from sprites.player import Player
+from sprites.food import Food
+from sprites.water import Water
 from ui.status_bar import draw_status_bar
 from ui.buttons import draw_button, check_button_click
 from random_events import generate_random_event, handle_random_event
@@ -19,8 +22,15 @@ pygame.display.set_caption("Cat Colony Simulator")
 
 # Load and resize cat images
 cat_images = load_cat_sprites('assets/cats', (50, 50))
+# Load and resize player image
+player_image = pygame.image.load('assets/player.png')
+player_image = pygame.transform.scale(player_image, (50, 50))
 
-# Load and resize shelter images
+# Load and resize food, water, and shelter images
+food_image = pygame.image.load('assets/food.png')
+food_image = pygame.transform.scale(food_image, (30, 30))
+water_image = pygame.image.load('assets/water.png')
+water_image = pygame.transform.scale(water_image, (30, 30))
 shelter_images = load_shelter_sprites('assets/shelters', [(100, 100), (150, 150), (200, 200)])
 
 # Initialize weather manager
@@ -29,7 +39,13 @@ weather_manager = WeatherManager()
 # Sprite groups
 all_sprites = pygame.sprite.Group()
 cats = pygame.sprite.Group()
+foods = pygame.sprite.Group()
+waters = pygame.sprite.Group()
 shelters = pygame.sprite.Group()
+
+# Create player
+player = Player(player_image)
+all_sprites.add(player)
 
 # Create initial cats
 for _ in range(random.randint(4, 6)):
@@ -112,19 +128,26 @@ def draw_analog_clock(screen, x, y, radius, time_of_day):
     pygame.draw.line(screen, BLACK, (x, y), (minute_x, minute_y), 2)
 
 while running:
+    keys = pygame.key.get_pressed()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = event.pos
             if check_button_click(feed_button_rect, mouse_pos):
-                for cat in cats:
-                    food = cat.feed(food)
+                if food > 0:
+                    food -= 1
+                    new_food = Food(player.rect.x, player.rect.y, food_image)
+                    all_sprites.add(new_food)
+                    foods.add(new_food)
             elif check_button_click(water_button_rect, mouse_pos):
-                for cat in cats:
-                    water = cat.give_water(water)
+                if water > 0:
+                    water -= 1
+                    new_water = Water(player.rect.x, player.rect.y, water_image)
+                    all_sprites.add(new_water)
+                    waters.add(new_water)
             elif check_button_click(shelter_button_rect, mouse_pos):
-                x, y = random.randint(0, SCREEN_WIDTH - 100), random.randint(0, SCREEN_HEIGHT - 100)
+                x, y = player.rect.x, player.rect.y
                 shelter = Shelter(x, y, shelter_images)
                 all_sprites.add(shelter)
                 shelters.add(shelter)
@@ -154,7 +177,8 @@ while running:
 
     if not paused:
         # Update the game
-        all_sprites.update()
+        player.update(keys)
+        cats.update()
 
         # Handle random events
         event_timer += clock.get_time()
@@ -180,10 +204,10 @@ while running:
 
     # Draw status bars for each cat
     for cat in cats:
-        draw_status_bar(screen, cat.rect.x, cat.rect.y - 10, cat.health, 100, RED, width=70)
-        draw_status_bar(screen, cat.rect.x, cat.rect.y - 20, cat.hunger, 100, BLUE, width=70)
-        draw_status_bar(screen, cat.rect.x, cat.rect.y - 30, cat.thirst, 100, GREEN, width=70)
-        draw_status_bar(screen, cat.rect.x, cat.rect.y - 40, cat.cleanliness, 100, BLACK, width=70)
+        draw_status_bar(screen, cat.rect.x, cat.rect.y - 40, cat.health, 100, RED, width=70)
+        draw_status_bar(screen, cat.rect.x, cat.rect.y - 30, cat.hunger, 100, BLUE, width=70)
+        draw_status_bar(screen, cat.rect.x, cat.rect.y - 20, cat.thirst, 100, GREEN, width=70)
+        draw_status_bar(screen, cat.rect.x, cat.rect.y - 10, cat.cleanliness, 100, BLACK, width=70)
 
     # Draw UI buttons
     button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
