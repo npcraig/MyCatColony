@@ -44,7 +44,7 @@ weather_effects = {
 time_of_day = 0  # 0 to 2399, where 0-1199 is day and 1200-2399 is night
 day_length = 2400  # Total number of ticks in a day
 
-# Cat sprite
+# Define Cat sprite with personalities
 class Cat(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -56,6 +56,11 @@ class Cat(pygame.sprite.Sprite):
         self.hunger = 0
         self.thirst = 0
         self.cleanliness = 100
+        self.speed = random.uniform(1, 3)  # Speed varies between 1 and 3
+        self.direction = random.choice(["left", "right", "up", "down"])
+        self.move_counter = 0
+        self.rest_counter = 0
+        self.personality = random.choice(["active", "lazy", "curious", "timid"])
 
     def update(self):
         global weather
@@ -85,6 +90,8 @@ class Cat(pygame.sprite.Sprite):
             closest_shelter = self.find_closest_shelter()
             if closest_shelter:
                 self.move_towards(closest_shelter.rect.x, closest_shelter.rect.y)
+        else:
+            self.wander()
 
     def feed(self):
         global food
@@ -123,14 +130,47 @@ class Cat(pygame.sprite.Sprite):
         dist = (dx ** 2 + dy ** 2) ** 0.5
         if dist != 0:
             dx, dy = dx / dist, dy / dist
-            self.rect.x += dx * 2  # Move speed
-            self.rect.y += dy * 2
+            self.rect.x += dx * self.speed  # Move speed
+            self.rect.y += dy * self.speed
+
+    def wander(self):
+        if self.rest_counter > 0:
+            self.rest_counter -= 1
+            return
+
+        if self.move_counter == 0:
+            self.direction = random.choice(["left", "right", "up", "down"])
+            self.move_counter = random.randint(30, 100)
+
+            if self.personality == "lazy":
+                self.rest_counter = random.randint(50, 100)
+            elif self.personality == "active":
+                self.rest_counter = random.randint(10, 20)
+            elif self.personality == "curious":
+                self.rest_counter = random.randint(20, 40)
+            elif self.personality == "timid":
+                self.rest_counter = random.randint(40, 60)
+        else:
+            self.move_counter -= 1
+            if self.direction == "left":
+                self.rect.x -= self.speed
+                if self.rect.x < 0: self.rect.x = SCREEN_WIDTH
+            elif self.direction == "right":
+                self.rect.x += self.speed
+                if self.rect.x > SCREEN_WIDTH: self.rect.x = 0
+            elif self.direction == "up":
+                self.rect.y -= self.speed
+                if self.rect.y < 0: self.rect.y = SCREEN_HEIGHT
+            elif self.direction == "down":
+                self.rect.y += self.speed
+                if self.rect.y > SCREEN_HEIGHT: self.rect.y = 0
 
 # Helper function to create a new cat
 def create_new_cat():
-    new_cat = Cat()
-    all_sprites.add(new_cat)
-    cats.add(new_cat)
+    if len(cats) < 15:
+        new_cat = Cat()
+        all_sprites.add(new_cat)
+        cats.add(new_cat)
 
 # Initialize the game window
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
@@ -141,8 +181,9 @@ all_sprites = pygame.sprite.Group()
 cats = pygame.sprite.Group()
 shelters = pygame.sprite.Group()
 
-# Create multiple cats
-for _ in range(5):
+# Create initial cats
+initial_cats = random.randint(4, 6)
+for _ in range(initial_cats):
     cat = Cat()
     all_sprites.add(cat)
     cats.add(cat)
@@ -210,7 +251,7 @@ while running:
     # Handle random events
     event_timer += clock.get_time()
     if event_timer >= event_interval:
-        random_event = generate_random_event()
+        random_event = generate_random_event(len(cats))
         event_message = handle_random_event(random_event, create_new_cat)
         event_timer = 0
 
