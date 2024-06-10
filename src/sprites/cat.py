@@ -19,10 +19,31 @@ class Cat(pygame.sprite.Sprite):
         self.rest_counter = 0
         self.personality = random.choice(["active", "lazy", "curious", "timid"])
         self.shelters = shelters
+        self.target_food = None
+        self.target_water = None
 
-    def update(self):
-        # Implementation of update method
-        self.wander()
+    def update(self, foods, waters):
+        if self.hunger > 70 and foods:
+            self.target_food = min(foods, key=lambda food: self.rect.distance_to(food.rect))
+            self.move_towards(self.target_food.rect.x, self.target_food.rect.y)
+        elif self.thirst > 70 and waters:
+            self.target_water = min(waters, key=lambda water: self.rect.distance_to(water.rect))
+            self.move_towards(self.target_water.rect.x, self.target_water.rect.y)
+        else:
+            self.wander()
+        self.check_interactions(foods, waters)
+
+    def check_interactions(self, foods, waters):
+        if self.target_food and self.rect.colliderect(self.target_food.rect):
+            foods.remove(self.target_food)
+            self.hunger = max(0, self.hunger - 40)
+            self.target_food.kill()
+            self.target_food = None
+        if self.target_water and self.rect.colliderect(self.target_water.rect):
+            waters.remove(self.target_water)
+            self.thirst = max(0, self.thirst - 40)
+            self.target_water.kill()
+            self.target_water = None
 
     def feed(self, food):
         if food > 0:

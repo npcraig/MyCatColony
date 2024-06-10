@@ -11,6 +11,7 @@ from ui.status_bar import draw_status_bar
 from ui.buttons import draw_button, check_button_click
 from random_events import generate_random_event, handle_random_event
 from utils.sprite_loader import load_cat_sprites, load_shelter_sprites
+from inventory import Inventory
 from math import sin, cos, radians
 
 # Initialize Pygame
@@ -35,6 +36,9 @@ shelter_images = load_shelter_sprites('assets/shelters', [(100, 100), (150, 150)
 
 # Initialize weather manager
 weather_manager = WeatherManager()
+
+# Initialize inventory
+inventory = Inventory()
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
@@ -100,10 +104,6 @@ event_timer = 0
 event_interval = 5000  # 5 seconds
 event_message = ""
 
-# Initialize resources
-food = 100
-water = 100
-
 def draw_analog_clock(screen, x, y, radius, time_of_day):
     pygame.draw.circle(screen, BLACK, (x, y), radius)
     pygame.draw.circle(screen, WHITE, (x, y), radius - 5)
@@ -135,14 +135,14 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = event.pos
             if check_button_click(feed_button_rect, mouse_pos):
-                if food > 0:
-                    food -= 1
+                if inventory.food > 0:
+                    inventory.food -= 1
                     new_food = Food(player.rect.x, player.rect.y, food_image)
                     all_sprites.add(new_food)
                     foods.add(new_food)
             elif check_button_click(water_button_rect, mouse_pos):
-                if water > 0:
-                    water -= 1
+                if inventory.water > 0:
+                    inventory.water -= 1
                     new_water = Water(player.rect.x, player.rect.y, water_image)
                     all_sprites.add(new_water)
                     waters.add(new_water)
@@ -158,17 +158,16 @@ while running:
                 for cat in cats:
                     cat.heal()
             elif check_button_click(buy_food_button_rect, mouse_pos):
-                # Implement buying food logic
-                pass
+                if inventory.spend_money(10):  # Assume each food costs $10
+                    inventory.add_food(1)
             elif check_button_click(buy_water_button_rect, mouse_pos):
-                # Implement buying water logic
-                pass
+                if inventory.spend_money(5):  # Assume each water costs $5
+                    inventory.add_water(1)
             elif check_button_click(gather_resources_button_rect, mouse_pos):
                 # Implement gathering resources logic
                 pass
             elif check_button_click(earn_money_button_rect, mouse_pos):
-                # Implement earning money logic
-                pass
+                inventory.earn_money(20)  # Example of earning money
             elif check_button_click(pause_button_rect, mouse_pos):
                 paused = not paused
             elif check_button_click(time_speed_button_rect, mouse_pos):
@@ -178,7 +177,7 @@ while running:
     if not paused:
         # Update the game
         player.update(keys)
-        cats.update()
+        cats.update(foods, waters)
 
         # Handle random events
         event_timer += clock.get_time()
@@ -223,18 +222,10 @@ while running:
         text_surface = font.render(event_message, True, BLACK)
         screen.blit(text_surface, (20, SCREEN_HEIGHT - 60))
 
-    # Display food, water, weather, date, and currency
+    # Display inventory status
     font = pygame.font.Font(None, 36)
-    food_text = font.render(f"Food: {food}", True, BLACK)
-    water_text = font.render(f"Water: {water}", True, BLACK)
-    weather_text = font.render(f"Weather: {weather_manager.current_weather}", True, BLACK)
-    date_text = font.render(f"Date: {weather_manager.current_date()}", True, BLACK)
-    currency_text = font.render(f"Money: ${weather_manager.currency}", True, BLACK)
-    screen.blit(food_text, (20, 180))
-    screen.blit(water_text, (240, 180))
-    screen.blit(weather_text, (460, 180))
-    screen.blit(date_text, (900, 180))
-    screen.blit(currency_text, (1120, 180))
+    inventory_text = font.render(inventory.get_status(), True, BLACK)
+    screen.blit(inventory_text, (20, 180))
 
     # Draw analog clock
     draw_analog_clock(screen, 1120 + button_width // 2, 180 + button_height // 2, 40, weather_manager.time_of_day)
