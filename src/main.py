@@ -1,6 +1,6 @@
 import pygame
 import random
-from settings import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BUTTON_COLOR, BUTTON_TEXT_COLOR, RED, BLUE, GREEN, BLACK
+from settings import SCREEN_WIDTH, SCREEN_HEIGHT, WHITE, BUTTON_COLOR, BUTTON_TEXT_COLOR, RED, BLUE, GREEN, BLACK, set_resolution, get_available_resolutions
 from weather import WeatherManager
 from sprites.cat import Cat
 from sprites.shelter import Shelter
@@ -111,6 +111,7 @@ paused = False
 clock = pygame.time.Clock()
 selected_cat = None  # Variable to store the selected cat
 fundraising_menu_open = False  # Variable to track if the fundraising menu is open
+settings_menu_open = False  # Variable to track if the settings menu is open
 
 # Time speed settings
 time_speeds = [0.5, 1, 2, 3]
@@ -139,7 +140,8 @@ button_rects = [
     pygame.Rect(1560, top_margin, button_width, button_height),   # Button for loading game
     pygame.Rect(1780, top_margin, button_width, button_height),   # Button for breeding cats
     pygame.Rect(1780, top_margin + button_height + button_spacing, button_width, button_height),  # Button for putting cats up for adoption
-    pygame.Rect(1780, top_margin + 2 * (button_height + button_spacing), button_width, button_height)  # Button for organizing fundraising event
+    pygame.Rect(1780, top_margin + 2 * (button_height + button_spacing), button_width, button_height),  # Button for organizing fundraising event
+    pygame.Rect(1780, top_margin + 3 * (button_height + button_spacing), button_width, button_height)  # Button for settings
 ]
 
 fundraising_event_button_rects = [
@@ -148,10 +150,15 @@ fundraising_event_button_rects = [
     pygame.Rect(460, SCREEN_HEIGHT // 2, button_width, button_height),
 ]
 
+settings_button_rects = [
+    pygame.Rect(20, SCREEN_HEIGHT // 2 + i * (button_height + button_spacing), button_width, button_height)
+    for i in range(10)  # Adjust this range to fit the number of resolutions you want to display
+]
+
 # Assign buttons to variables for easy access
 (feed_button_rect, water_button_rect, shelter_button_rect, clean_button_rect, heal_button_rect, 
  buy_food_button_rect, buy_water_button_rect, gather_resources_button_rect, 
- earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect, adopt_button_rect, fundraising_button_rect) = button_rects
+ earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect, adopt_button_rect, fundraising_button_rect, settings_button_rect) = button_rects
 
 # Random event timer
 event_timer = 0
@@ -181,6 +188,46 @@ def draw_analog_clock(screen, x, y, radius, time_of_day):
     minute_y = y + int(minute_hand_length * sin(minute_angle))
     pygame.draw.line(screen, BLACK, (x, y), (minute_x, minute_y), 2)
 
+def open_settings_menu():
+    global screen, SCREEN_WIDTH, SCREEN_HEIGHT, settings_menu_open
+    resolutions = get_available_resolutions()
+    selected_resolution_index = 0
+
+    settings_menu_running = True
+    while settings_menu_running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                settings_menu_running = False
+                pygame.quit()
+                exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                for i, rect in enumerate(settings_button_rects):
+                    if check_button_click(rect, mouse_pos):
+                        selected_resolution_index = i
+                        set_resolution(resolutions[i][0], resolutions[i][1])
+                        screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
+                if check_button_click(return_button_rect, mouse_pos):
+                    settings_menu_running = False
+
+        # Clear the screen
+        screen.fill(WHITE)
+
+        # Draw settings menu buttons
+        settings_labels = [f"{res[0]}x{res[1]}" for res in resolutions]
+        for rect, label in zip(settings_button_rects, settings_labels):
+            draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
+
+        # Draw return button
+        draw_button(screen, return_button_rect, "Return", BUTTON_COLOR, BUTTON_TEXT_COLOR)
+
+        pygame.display.flip()
+
+    settings_menu_open = False
+    screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
+
+return_button_rect = pygame.Rect(20, SCREEN_HEIGHT // 2 + 11 * (button_height + button_spacing), button_width, button_height)
+
 while running:
     keys = pygame.key.get_pressed()
     for event in pygame.event.get():
@@ -195,6 +242,10 @@ while running:
                         fundraising.start_event(fundraising_events[i])
                         fundraising_menu_open = False
                         break
+            elif settings_menu_open:
+                # Check for clicks on settings buttons
+                open_settings_menu()
+                settings_menu_open = False
             else:
                 if check_button_click(feed_button_rect, mouse_pos):
                     if inventory.food > 0:
@@ -251,6 +302,8 @@ while running:
                     put_up_for_adoption(selected_cat)
                 elif check_button_click(fundraising_button_rect, mouse_pos):
                     fundraising_menu_open = True
+                elif check_button_click(settings_button_rect, mouse_pos):
+                    settings_menu_open = True
                 else:
                     # Check for clicks on cats
                     for cat in cats:
@@ -296,7 +349,7 @@ while running:
     # Draw UI buttons
     button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
                      "Buy Food", "Buy Water", "Gather Resources", "Earn Money", 
-                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats", "Adopt Cat", "Fundraising"]
+                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats", "Adopt Cat", "Fundraising", "Settings"]
 
     for rect, label in zip(button_rects, button_labels):
         draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
