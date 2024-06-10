@@ -10,8 +10,8 @@ class Cat(pygame.sprite.Sprite):
         self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
         self.rect.y = random.randint(0, SCREEN_HEIGHT - self.rect.height)
         self.health = 100
-        self.hunger = 0
-        self.thirst = 0
+        self.hunger = random.randint(0, 100)
+        self.thirst = random.randint(0, 100)
         self.cleanliness = 100
         self.speed = random.uniform(1, 3)
         self.direction = random.choice(["left", "right", "up", "down"])
@@ -23,15 +23,22 @@ class Cat(pygame.sprite.Sprite):
         self.target_water = None
 
     def update(self, foods, waters):
+        self.hunger += 0.1
+        self.thirst += 0.1
         if self.hunger > 70 and foods:
-            self.target_food = min(foods, key=lambda food: self.rect.distance_to(food.rect))
+            self.target_food = min(foods, key=lambda food: self.distance_to(food.rect))
             self.move_towards(self.target_food.rect.x, self.target_food.rect.y)
         elif self.thirst > 70 and waters:
-            self.target_water = min(waters, key=lambda water: self.rect.distance_to(water.rect))
+            self.target_water = min(waters, key=lambda water: self.distance_to(water.rect))
             self.move_towards(self.target_water.rect.x, self.target_water.rect.y)
         else:
             self.wander()
         self.check_interactions(foods, waters)
+
+    def distance_to(self, target_rect):
+        dx = self.rect.centerx - target_rect.centerx
+        dy = self.rect.centery - target_rect.centery
+        return (dx ** 2 + dy ** 2) ** 0.5
 
     def check_interactions(self, foods, waters):
         if self.target_food and self.rect.colliderect(self.target_food.rect):
