@@ -172,6 +172,12 @@ def create_new_cat():
         all_sprites.add(new_cat)
         cats.add(new_cat)
 
+# Function to convert time_of_day to HH:MM format
+def format_time_of_day(ticks):
+    hours = (ticks // 100) % 24
+    minutes = (ticks % 100) * 60 // 100
+    return f"{hours:02}:{minutes:02}"
+
 # Initialize the game window
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 pygame.display.set_caption("Cat Colony Simulator")
@@ -190,6 +196,7 @@ for _ in range(initial_cats):
 
 # Main game loop
 running = True
+paused = False
 clock = pygame.time.Clock()
 
 # UI positions
@@ -202,6 +209,7 @@ buy_food_button_rect = pygame.Rect(20, 100, 200, 60)
 buy_water_button_rect = pygame.Rect(240, 100, 200, 60)
 gather_resources_button_rect = pygame.Rect(460, 100, 200, 60)
 earn_money_button_rect = pygame.Rect(680, 100, 200, 60)  # New button for earning money
+pause_button_rect = pygame.Rect(900, 100, 200, 60)  # Button for pausing the game
 
 # Random event timer
 event_timer = 0
@@ -244,22 +252,25 @@ while running:
                 water += random.randint(5, 15)
             elif check_button_click(earn_money_button_rect.x, earn_money_button_rect.y, earn_money_button_rect.width, earn_money_button_rect.height, mouse_pos):
                 currency += random.randint(10, 20)
+            elif check_button_click(pause_button_rect.x, pause_button_rect.y, pause_button_rect.width, pause_button_rect.height, mouse_pos):
+                paused = not paused
 
-    # Update the game
-    all_sprites.update()
+    if not paused:
+        # Update the game
+        all_sprites.update()
 
-    # Handle random events
-    event_timer += clock.get_time()
-    if event_timer >= event_interval:
-        random_event = generate_random_event(len(cats))
-        event_message = handle_random_event(random_event, create_new_cat)
-        event_timer = 0
+        # Handle random events
+        event_timer += clock.get_time()
+        if event_timer >= event_interval:
+            random_event = generate_random_event(len(cats))
+            event_message = handle_random_event(random_event, create_new_cat)
+            event_timer = 0
 
-        # Randomly change weather
-        weather = random.choice(["Sunny", "Rainy", "Windy", "Snowy"])
+            # Randomly change weather
+            weather = random.choice(["Sunny", "Rainy", "Windy", "Snowy"])
 
-    # Update time of day
-    time_of_day = (time_of_day + 1) % day_length
+        # Update time of day
+        time_of_day = (time_of_day + 1) % day_length
 
     # Clear the screen
     screen.fill(WHITE)
@@ -284,6 +295,7 @@ while running:
     draw_button(screen, buy_water_button_rect.x, buy_water_button_rect.y, buy_water_button_rect.width, buy_water_button_rect.height, "Buy Water", BUTTON_COLOR, BUTTON_TEXT_COLOR)
     draw_button(screen, gather_resources_button_rect.x, gather_resources_button_rect.y, gather_resources_button_rect.width, gather_resources_button_rect.height, "Gather Resources", BUTTON_COLOR, BUTTON_TEXT_COLOR)
     draw_button(screen, earn_money_button_rect.x, earn_money_button_rect.y, earn_money_button_rect.width, earn_money_button_rect.height, "Earn Money", BUTTON_COLOR, BUTTON_TEXT_COLOR)
+    draw_button(screen, pause_button_rect.x, pause_button_rect.y, pause_button_rect.width, pause_button_rect.height, "Pause" if not paused else "Resume", BUTTON_COLOR, BUTTON_TEXT_COLOR)
 
     # Display random event message
     if event_message:
@@ -296,7 +308,7 @@ while running:
     food_text = font.render(f"Food: {food}", True, BLACK)
     water_text = font.render(f"Water: {water}", True, BLACK)
     weather_text = font.render(f"Weather: {weather}", True, BLACK)
-    time_of_day_text = font.render(f"Time of Day: {'Day' if time_of_day < 1200 else 'Night'}", True, BLACK)
+    time_of_day_text = font.render(f"Time: {format_time_of_day(time_of_day)}", True, BLACK)
     currency_text = font.render(f"Money: ${currency}", True, BLACK)
     screen.blit(food_text, (20, 180))
     screen.blit(water_text, (240, 180))
