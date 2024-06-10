@@ -2,9 +2,8 @@ import pygame
 import random
 from status_bar import draw_status_bar
 from ui import draw_button, check_button_click
-from shelter import Shelter
 from random_events import generate_random_event, handle_random_event
-from sprite_loader import load_cat_sprites
+from sprite_loader import load_cat_sprites, load_shelter_sprites
 
 # Initialize Pygame
 pygame.init()
@@ -26,23 +25,39 @@ BUTTON_TEXT_COLOR = WHITE
 cat_size = (50, 50)  # Desired size for cat sprites
 cat_images = load_cat_sprites('assets/cats', cat_size)
 
+# Load and resize shelter images
+shelter_sizes = [(100, 100), (150, 150), (200, 200)]  # Add more sizes as needed
+shelter_images = load_shelter_sprites('assets/shelters', shelter_sizes)
+
 # Resource management
 food = 100
 water = 100
 currency = 100  # New currency system
 
 # Weather system
-weather = "Sunny"
+current_weather = "Sunny"
 weather_effects = {
     "Sunny": {"hunger": 0.01, "thirst": 0.01},
+    "Cloudy": {"hunger": 0.01, "thirst": 0.01},
     "Rainy": {"hunger": 0.02, "thirst": 0.01},
-    "Windy": {"hunger": 0.01, "thirst": 0.02},
-    "Snowy": {"hunger": 0.03, "thirst": 0.02}
+    "Heat Wave": {"hunger": 0.05, "thirst": 0.05},
+    "Snow Storm": {"hunger": 0.04, "thirst": 0.03}
+}
+weather_probabilities = {
+    "spring": {"Sunny": 0.5, "Cloudy": 0.3, "Rainy": 0.2},
+    "summer": {"Sunny": 0.6, "Cloudy": 0.2, "Rainy": 0.1, "Heat Wave": 0.1},
+    "autumn": {"Sunny": 0.5, "Cloudy": 0.3, "Rainy": 0.2},
+    "winter": {"Sunny": 0.3, "Cloudy": 0.3, "Rainy": 0.1, "Snow Storm": 0.3}
 }
 
-# Day-night cycle
-time_of_day = 0  # 0 to 2399, where 0-1199 is day and 1200-2399 is night
+# Time and season system
+months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+seasons = {"spring": ["March", "April", "May"], "summer": ["June", "July", "August"], "autumn": ["September", "October", "November"], "winter": ["December", "January", "February"]}
+current_month_index = 0
+current_day = 1
+current_year = 2024
 day_length = 2400  # Total number of ticks in a day
+time_of_day = 0  # 0 to 2399, where 0-1199 is day and 1200-2399 is night
 
 # Define Cat sprite with personalities
 class Cat(pygame.sprite.Sprite):
@@ -63,11 +78,11 @@ class Cat(pygame.sprite.Sprite):
         self.personality = random.choice(["active", "lazy", "curious", "timid"])
 
     def update(self):
-        global weather
+        global current_weather
         global time_of_day
         # Behavior affected by weather and time of day
-        hunger_rate = weather_effects[weather]["hunger"]
-        thirst_rate = weather_effects[weather]["thirst"]
+        hunger_rate = weather_effects[current_weather]["hunger"]
+        thirst_rate = weather_effects[current_weather]["thirst"]
 
         if 1200 <= time_of_day < 2400:  # Night time
             hunger_rate *= 0.5
@@ -165,6 +180,15 @@ class Cat(pygame.sprite.Sprite):
                 self.rect.y += self.speed
                 if self.rect.y > SCREEN_HEIGHT: self.rect.y = 0
 
+# Define Shelter sprite
+class Shelter(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = random.choice(shelter_images)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
 # Helper function to create a new cat
 def create_new_cat():
     if len(cats) < 15:
@@ -177,6 +201,21 @@ def format_time_of_day(ticks):
     hours = (ticks // 100) % 24
     minutes = (ticks % 100) * 60 // 100
     return f"{hours:02}:{minutes:02}"
+
+# Function to get current season
+def get_current_season():
+    month = months[current_month_index]
+    for season, season_months in seasons.items():
+        if month in season_months:
+            return season
+    return "spring"  # Default to spring
+
+# Function to determine the next weather event based on the current season
+def determine_next_weather():
+    season = get_current_season()
+    probabilities = weather_probabilities[season]
+    weather_event = random.choices(list(probabilities.keys()), weights=probabilities.values(), k=1)[0]
+    return weather_event
 
 # Initialize the game window
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
@@ -215,6 +254,10 @@ pause_button_rect = pygame.Rect(900, 100, 200, 60)  # Button for pausing the gam
 event_timer = 0
 event_interval = 5000  # 5 seconds
 event_message = ""
+
+# Weather update timer
+weather_timer = 0
+weather_interval = 60000  # 60 seconds
 
 while running:
     for event in pygame.event.get():
@@ -266,11 +309,23 @@ while running:
             event_message = handle_random_event(random_event, create_new_cat)
             event_timer = 0
 
-            # Randomly change weather
-            weather = random.choice(["Sunny", "Rainy", "Windy", "Snowy"])
+        # Update weather
+        weather_timer += clock.get_time()
+        if weather_timer >= weather_interval:
+            current_weather = determine_next_weather()
+            weather_timer = 0
 
         # Update time of day
         time_of_day = (time_of_day + 1) % day_length
+
+        # Update day, month, and year
+        if time_of_day == 0:
+            current_day += 1
+            if current_day > 30:  # Simplified month length
+                current_day = 1
+                current_month_index = (current_month_index + 1) % 12
+                if current_month_index == 0:
+                    current_year += 1
 
     # Clear the screen
     screen.fill(WHITE)
@@ -307,14 +362,16 @@ while running:
     font = pygame.font.Font(None, 36)
     food_text = font.render(f"Food: {food}", True, BLACK)
     water_text = font.render(f"Water: {water}", True, BLACK)
-    weather_text = font.render(f"Weather: {weather}", True, BLACK)
+    weather_text = font.render(f"Weather: {current_weather}", True, BLACK)
     time_of_day_text = font.render(f"Time: {format_time_of_day(time_of_day)}", True, BLACK)
+    date_text = font.render(f"Date: {months[current_month_index]} {current_day}, {current_year}", True, BLACK)
     currency_text = font.render(f"Money: ${currency}", True, BLACK)
     screen.blit(food_text, (20, 180))
     screen.blit(water_text, (240, 180))
     screen.blit(weather_text, (460, 180))
     screen.blit(time_of_day_text, (680, 180))
-    screen.blit(currency_text, (900, 180))
+    screen.blit(date_text, (900, 180))
+    screen.blit(currency_text, (1120, 180))
 
     # Update the display
     pygame.display.flip()
