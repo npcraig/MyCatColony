@@ -68,6 +68,7 @@ def create_new_cat():
 running = True
 paused = False
 clock = pygame.time.Clock()
+selected_cat = None  # Variable to store the selected cat
 
 # Time speed settings
 time_speeds = [0.5, 1, 2, 3]
@@ -173,6 +174,12 @@ while running:
             elif check_button_click(time_speed_button_rect, mouse_pos):
                 current_time_speed_index = (current_time_speed_index + 1) % len(time_speeds)
                 time_speed = time_speeds[current_time_speed_index]
+            else:
+                # Check for clicks on cats
+                for cat in cats:
+                    if cat.rect.collidepoint(mouse_pos):
+                        selected_cat = cat
+                        break
 
     if not paused:
         # Update the game
@@ -229,6 +236,23 @@ while running:
 
     # Draw analog clock
     draw_analog_clock(screen, 1120 + button_width // 2, 180 + button_height // 2, 40, weather_manager.time_of_day)
+
+    # Draw detailed status panel for the selected cat
+    if selected_cat:
+        panel_width = 300
+        panel_height = 200
+        panel_x = SCREEN_WIDTH - panel_width - 20
+        panel_y = SCREEN_HEIGHT - panel_height - 20
+        pygame.draw.rect(screen, BLACK, (panel_x, panel_y, panel_width, panel_height))
+        pygame.draw.rect(screen, WHITE, (panel_x + 5, panel_y + 5, panel_width - 10, panel_height - 10))
+
+        status_text = f"Health: {selected_cat.health}\nHunger: {selected_cat.hunger}\nThirst: {selected_cat.thirst}\nCleanliness: {selected_cat.cleanliness}"
+        font = pygame.font.Font(None, 28)
+        y_offset = panel_y + 10
+        for line in status_text.split('\n'):
+            text_surface = font.render(line, True, BLACK)
+            screen.blit(text_surface, (panel_x + 10, y_offset))
+            y_offset += 30
 
     # Update the display
     pygame.display.flip()
