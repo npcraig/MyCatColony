@@ -22,6 +22,7 @@ class Cat(pygame.sprite.Sprite):
 
         self.target_food = None  # Initialize target_food attribute
         self.target_water = None  # Initialize target_water attribute
+        self.target_cat = None  # Initialize target_cat attribute
 
         if traits is None:
             self.traits = generate_random_traits()
@@ -36,9 +37,10 @@ class Cat(pygame.sprite.Sprite):
         self.fur_color = self.traits["fur_color"]
         self.eye_color = self.traits["eye_color"]
         self.behavior = self.traits["behavior"]
+        self.personality = self.traits["personality"]
         self.breed = self.traits["breed"]
 
-    def update(self, foods, waters):
+    def update(self, foods, waters, cats):
         self.hunger += 0.1
         self.thirst += 0.1
         if self.hunger > 70 and foods:
@@ -49,14 +51,14 @@ class Cat(pygame.sprite.Sprite):
             self.move_towards(self.target_water.rect.x, self.target_water.rect.y)
         else:
             self.wander()
-        self.check_interactions(foods, waters)
+        self.check_interactions(foods, waters, cats)
 
     def distance_to(self, target_rect):
         dx = self.rect.centerx - target_rect.centerx
         dy = self.rect.centery - target_rect.centery
         return (dx ** 2 + dy ** 2) ** 0.5
 
-    def check_interactions(self, foods, waters):
+    def check_interactions(self, foods, waters, cats):
         if self.target_food and self.rect.colliderect(self.target_food.rect):
             foods.remove(self.target_food)
             self.hunger = max(0, self.hunger - 40)
@@ -67,6 +69,29 @@ class Cat(pygame.sprite.Sprite):
             self.thirst = max(0, self.thirst - 40)
             self.target_water.kill()
             self.target_water = None
+        for cat in cats:
+            if cat != self and self.rect.colliderect(cat.rect):
+                self.interact_with_cat(cat)
+
+    def interact_with_cat(self, other_cat):
+        if self.personality == "Playful" and other_cat.personality in ["Playful", "Friendly"]:
+            self.play_with(other_cat)
+        elif self.personality == "Aggressive" or other_cat.personality == "Aggressive":
+            self.fight_with(other_cat)
+        elif self.personality == "Shy" and other_cat.personality == "Friendly":
+            self.groom(other_cat)
+
+    def play_with(self, other_cat):
+        self.health = min(100, self.health + 10)
+        other_cat.health = min(100, other_cat.health + 10)
+
+    def fight_with(self, other_cat):
+        self.health = max(0, self.health - 20)
+        other_cat.health = max(0, other_cat.health - 20)
+
+    def groom(self, other_cat):
+        self.cleanliness = min(100, self.cleanliness + 10)
+        other_cat.cleanliness = min(100, other_cat.cleanliness + 10)
 
     def feed(self, food):
         if food > 0:

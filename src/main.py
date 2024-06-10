@@ -74,6 +74,11 @@ def breed_cats(cat1, cat2):
         all_sprites.add(new_cat)
         cats.add(new_cat)
 
+# Adoption function
+def put_up_for_adoption(cat):
+    cats.remove(cat)
+    all_sprites.remove(cat)
+
 # Main game loop
 running = True
 paused = False
@@ -105,13 +110,14 @@ button_rects = [
     pygame.Rect(1120, top_margin, button_width, button_height),  # Button for changing time speed
     pygame.Rect(1340, top_margin, button_width, button_height),  # Button for saving game
     pygame.Rect(1560, top_margin, button_width, button_height),   # Button for loading game
-    pygame.Rect(1780, top_margin, button_width, button_height)   # Button for breeding cats
+    pygame.Rect(1780, top_margin, button_width, button_height),   # Button for breeding cats
+    pygame.Rect(1780, top_margin + button_height + button_spacing, button_width, button_height)  # Button for putting cats up for adoption
 ]
 
 # Assign buttons to variables for easy access
 (feed_button_rect, water_button_rect, shelter_button_rect, clean_button_rect, heal_button_rect, 
  buy_food_button_rect, buy_water_button_rect, gather_resources_button_rect, 
- earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect) = button_rects
+ earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect, adopt_button_rect) = button_rects
 
 # Random event timer
 event_timer = 0
@@ -196,6 +202,8 @@ while running:
                 if len(cats) >= 2:
                     cat1, cat2 = random.sample(cats.sprites(), 2)
                     breed_cats(cat1, cat2)
+            elif check_button_click(adopt_button_rect, mouse_pos) and selected_cat:
+                put_up_for_adoption(selected_cat)
             else:
                 # Check for clicks on cats
                 for cat in cats:
@@ -206,7 +214,7 @@ while running:
     if not paused:
         # Update the game
         player.update(keys)
-        cats.update(foods, waters)
+        cats.update(foods, waters, cats)
 
         # Handle random events
         event_timer += clock.get_time()
@@ -240,7 +248,7 @@ while running:
     # Draw UI buttons
     button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
                      "Buy Food", "Buy Water", "Gather Resources", "Earn Money", 
-                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats"]
+                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats", "Adopt Cat"]
 
     for rect, label in zip(button_rects, button_labels):
         draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
@@ -268,7 +276,7 @@ while running:
         pygame.draw.rect(screen, BLACK, (panel_x, panel_y, panel_width, panel_height))
         pygame.draw.rect(screen, WHITE, (panel_x + 5, panel_y + 5, panel_width - 10, panel_height - 10))
 
-        status_text = f"Name: {selected_cat.name}\nBreed: {selected_cat.breed}\nFur Color: {selected_cat.fur_color}\nEye Color: {selected_cat.eye_color}\nBehavior: {selected_cat.behavior}\n\nHealth: {selected_cat.health}\nHunger: {selected_cat.hunger}\nThirst: {selected_cat.thirst}\nCleanliness: {selected_cat.cleanliness}"
+        status_text = f"Name: {selected_cat.name}\nBreed: {selected_cat.breed}\nFur Color: {selected_cat.fur_color}\nEye Color: {selected_cat.eye_color}\nPersonality: {selected_cat.personality}\n\nHealth: {selected_cat.health}\nHunger: {selected_cat.hunger}\nThirst: {selected_cat.thirst}\nCleanliness: {selected_cat.cleanliness}"
         font = pygame.font.Font(None, 28)
         y_offset = panel_y + 10
         for line in status_text.split('\n'):
