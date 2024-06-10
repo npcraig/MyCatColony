@@ -76,8 +76,8 @@ class WeatherManager:
         elif self.current_weather == "Rainy":
             self.update_raindrops()
 
-    def update_time(self):
-        self.time_of_day = (self.time_of_day + 1) % self.day_length
+    def update_time(self, speed_multiplier):
+        self.time_of_day = (self.time_of_day + speed_multiplier) % self.day_length
 
     def draw_weather_effects(self, screen):
         if self.current_weather == "Sunny":

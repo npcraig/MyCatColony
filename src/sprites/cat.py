@@ -22,29 +22,33 @@ class Cat(pygame.sprite.Sprite):
 
     def update(self):
         # Implementation of update method
-        pass
+        self.wander()
 
-    def feed(self):
-        global food
+    def feed(self, food):
         if food > 0:
             food -= 1
             self.hunger -= 20
-            if self.hunger < 0: self.hunger = 0
+            if self.hunger < 0:
+                self.hunger = 0
+        return food
 
-    def give_water(self):
-        global water
+    def give_water(self, water):
         if water > 0:
             water -= 1
             self.thirst -= 20
-            if self.thirst < 0: self.thirst = 0
+            if self.thirst < 0:
+                self.thirst = 0
+        return water
 
     def clean(self):
         self.cleanliness += 20
-        if self.cleanliness > 100: self.cleanliness = 100
+        if self.cleanliness > 100:
+            self.cleanliness = 100
 
     def heal(self):
         self.health += 20
-        if self.health > 100: self.health = 100
+        if self.health > 100:
+            self.health = 100
 
     def find_closest_shelter(self):
         min_dist = float('inf')
@@ -85,13 +89,17 @@ class Cat(pygame.sprite.Sprite):
             self.move_counter -= 1
             if self.direction == "left":
                 self.rect.x -= self.speed
-                if self.rect.x < 0: self.rect.x = SCREEN_WIDTH
+                if self.rect.x < 0:
+                    self.rect.x = SCREEN_WIDTH
             elif self.direction == "right":
                 self.rect.x += self.speed
-                if self.rect.x > SCREEN_WIDTH: self.rect.x = 0
+                if self.rect.x > SCREEN_WIDTH:
+                    self.rect.x = 0
             elif self.direction == "up":
                 self.rect.y -= self.speed
-                if self.rect.y < 0: self.rect.y = SCREEN_HEIGHT
+                if self.rect.y < 0:
+                    self.rect.y = SCREEN_HEIGHT
             elif self.direction == "down":
                 self.rect.y += self.speed
-                if self.rect.y > SCREEN_HEIGHT: self.rect.y = 0
+                if self.rect.y > SCREEN_HEIGHT:
+                    self.rect.y = 0

@@ -1,4 +1,5 @@
 import pygame
+import random
 
 class Shelter(pygame.sprite.Sprite):
     def __init__(self, x, y, shelter_images):

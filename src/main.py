@@ -7,7 +7,8 @@ from sprites.shelter import Shelter
 from ui.status_bar import draw_status_bar
 from ui.buttons import draw_button, check_button_click
 from random_events import generate_random_event, handle_random_event
-from utilities.sprite_loader import load_cat_sprites, load_shelter_sprites
+from utils.sprite_loader import load_cat_sprites, load_shelter_sprites
+from math import sin, cos, radians
 
 # Initialize Pygame
 pygame.init()
@@ -48,22 +49,67 @@ running = True
 paused = False
 clock = pygame.time.Clock()
 
+# Time speed settings
+time_speeds = [0.5, 1, 2, 3]
+current_time_speed_index = 1  # Start at 1x speed
+time_speed = time_speeds[current_time_speed_index]
+
 # UI positions
-feed_button_rect = pygame.Rect(20, 20, 200, 60)
-water_button_rect = pygame.Rect(240, 20, 200, 60)
-shelter_button_rect = pygame.Rect(460, 20, 200, 60)
-clean_button_rect = pygame.Rect(680, 20, 200, 60)
-heal_button_rect = pygame.Rect(900, 20, 200, 60)
-buy_food_button_rect = pygame.Rect(20, 100, 200, 60)
-buy_water_button_rect = pygame.Rect(240, 100, 200, 60)
-gather_resources_button_rect = pygame.Rect(460, 100, 200, 60)
-earn_money_button_rect = pygame.Rect(680, 100, 200, 60)
-pause_button_rect = pygame.Rect(900, 100, 200, 60)
+button_width = 200
+button_height = 60
+button_spacing = 20
+top_margin = 20
+
+button_rects = [
+    pygame.Rect(20, top_margin, button_width, button_height),
+    pygame.Rect(240, top_margin, button_width, button_height),
+    pygame.Rect(460, top_margin, button_width, button_height),
+    pygame.Rect(680, top_margin, button_width, button_height),
+    pygame.Rect(900, top_margin, button_width, button_height),
+    pygame.Rect(20, top_margin + button_height + button_spacing, button_width, button_height),
+    pygame.Rect(240, top_margin + button_height + button_spacing, button_width, button_height),
+    pygame.Rect(460, top_margin + button_height + button_spacing, button_width, button_height),
+    pygame.Rect(680, top_margin + button_height + button_spacing, button_width, button_height),
+    pygame.Rect(900, top_margin + button_height + button_spacing, button_width, button_height),
+    pygame.Rect(1120, top_margin, button_width, button_height)  # Button for changing time speed
+]
+
+# Assign buttons to variables for easy access
+(feed_button_rect, water_button_rect, shelter_button_rect, clean_button_rect, heal_button_rect, 
+ buy_food_button_rect, buy_water_button_rect, gather_resources_button_rect, 
+ earn_money_button_rect, pause_button_rect, time_speed_button_rect) = button_rects
 
 # Random event timer
 event_timer = 0
 event_interval = 5000  # 5 seconds
 event_message = ""
+
+# Initialize resources
+food = 100
+water = 100
+
+def draw_analog_clock(screen, x, y, radius, time_of_day):
+    pygame.draw.circle(screen, BLACK, (x, y), radius)
+    pygame.draw.circle(screen, WHITE, (x, y), radius - 5)
+
+    hours = (time_of_day // 100) % 24
+    minutes = (time_of_day % 100) * 60 // 100
+
+    # Calculate the angles for the hour and minute hands
+    hour_angle = radians((hours % 12) * 30 - 90)
+    minute_angle = radians(minutes * 6 - 90)
+
+    # Draw the hour hand
+    hour_hand_length = radius * 0.5
+    hour_x = x + int(hour_hand_length * cos(hour_angle))
+    hour_y = y + int(hour_hand_length * sin(hour_angle))
+    pygame.draw.line(screen, BLACK, (x, y), (hour_x, hour_y), 4)
+
+    # Draw the minute hand
+    minute_hand_length = radius * 0.8
+    minute_x = x + int(minute_hand_length * cos(minute_angle))
+    minute_y = y + int(minute_hand_length * sin(minute_angle))
+    pygame.draw.line(screen, BLACK, (x, y), (minute_x, minute_y), 2)
 
 while running:
     for event in pygame.event.get():
@@ -73,10 +119,10 @@ while running:
             mouse_pos = event.pos
             if check_button_click(feed_button_rect, mouse_pos):
                 for cat in cats:
-                    cat.feed()
+                    food = cat.feed(food)
             elif check_button_click(water_button_rect, mouse_pos):
                 for cat in cats:
-                    cat.give_water()
+                    water = cat.give_water(water)
             elif check_button_click(shelter_button_rect, mouse_pos):
                 x, y = random.randint(0, SCREEN_WIDTH - 100), random.randint(0, SCREEN_HEIGHT - 100)
                 shelter = Shelter(x, y, shelter_images)
@@ -102,6 +148,9 @@ while running:
                 pass
             elif check_button_click(pause_button_rect, mouse_pos):
                 paused = not paused
+            elif check_button_click(time_speed_button_rect, mouse_pos):
+                current_time_speed_index = (current_time_speed_index + 1) % len(time_speeds)
+                time_speed = time_speeds[current_time_speed_index]
 
     if not paused:
         # Update the game
@@ -115,10 +164,10 @@ while running:
             event_timer = 0
 
         # Update weather
-        weather_manager.update_weather(clock.get_time())
+        weather_manager.update_weather(clock.get_time() * time_speed)
 
         # Update time of day
-        weather_manager.update_time()
+        weather_manager.update_time(time_speed)
 
     # Clear the screen
     screen.fill(WHITE)
@@ -137,16 +186,12 @@ while running:
         draw_status_bar(screen, cat.rect.x, cat.rect.y - 40, cat.cleanliness, 100, BLACK, width=70)
 
     # Draw UI buttons
-    draw_button(screen, feed_button_rect, "Feed Cats", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, water_button_rect, "Water Cats", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, shelter_button_rect, "Build Shelter", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, clean_button_rect, "Clean Cats", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, heal_button_rect, "Heal Cats", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, buy_food_button_rect, "Buy Food", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, buy_water_button_rect, "Buy Water", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, gather_resources_button_rect, "Gather Resources", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, earn_money_button_rect, "Earn Money", BUTTON_COLOR, BUTTON_TEXT_COLOR)
-    draw_button(screen, pause_button_rect, "Pause" if not paused else "Resume", BUTTON_COLOR, BUTTON_TEXT_COLOR)
+    button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
+                     "Buy Food", "Buy Water", "Gather Resources", "Earn Money", 
+                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x"]
+
+    for rect, label in zip(button_rects, button_labels):
+        draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
 
     # Display random event message
     if event_message:
@@ -154,20 +199,21 @@ while running:
         text_surface = font.render(event_message, True, BLACK)
         screen.blit(text_surface, (20, SCREEN_HEIGHT - 60))
 
-    # Display food, water, weather, time of day, and currency
+    # Display food, water, weather, date, and currency
     font = pygame.font.Font(None, 36)
-    food_text = font.render(f"Food: {weather_manager.food}", True, BLACK)
-    water_text = font.render(f"Water: {weather_manager.water}", True, BLACK)
+    food_text = font.render(f"Food: {food}", True, BLACK)
+    water_text = font.render(f"Water: {water}", True, BLACK)
     weather_text = font.render(f"Weather: {weather_manager.current_weather}", True, BLACK)
-    time_of_day_text = font.render(f"Time: {weather_manager.format_time_of_day()}", True, BLACK)
     date_text = font.render(f"Date: {weather_manager.current_date()}", True, BLACK)
     currency_text = font.render(f"Money: ${weather_manager.currency}", True, BLACK)
     screen.blit(food_text, (20, 180))
     screen.blit(water_text, (240, 180))
     screen.blit(weather_text, (460, 180))
-    screen.blit(time_of_day_text, (680, 180))
     screen.blit(date_text, (900, 180))
     screen.blit(currency_text, (1120, 180))
+
+    # Draw analog clock
+    draw_analog_clock(screen, 1120 + button_width // 2, 180 + button_height // 2, 40, weather_manager.time_of_day)
 
     # Update the display
     pygame.display.flip()
