@@ -24,7 +24,7 @@ BUTTON_TEXT_COLOR = WHITE
 
 # Load and resize cat images
 cat_size = (50, 50)  # Desired size for cat sprites
-cat_images = load_cat_sprites('assets', cat_size)
+cat_images = load_cat_sprites('assets/cats', cat_size)
 
 # Resource management
 food = 100
