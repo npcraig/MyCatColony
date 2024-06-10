@@ -1,9 +1,10 @@
 import pygame
 import random
 from settings import SCREEN_WIDTH, SCREEN_HEIGHT
+from traits import generate_random_traits, inherit_traits, apply_random_mutation, generate_random_name
 
 class Cat(pygame.sprite.Sprite):
-    def __init__(self, cat_images, shelters):
+    def __init__(self, cat_images, shelters, traits=None, name=None):
         super().__init__()
         self.image = random.choice(cat_images)
         self.rect = self.image.get_rect()
@@ -17,10 +18,25 @@ class Cat(pygame.sprite.Sprite):
         self.direction = random.choice(["left", "right", "up", "down"])
         self.move_counter = 0
         self.rest_counter = 0
-        self.personality = random.choice(["active", "lazy", "curious", "timid"])
         self.shelters = shelters
-        self.target_food = None
-        self.target_water = None
+
+        self.target_food = None  # Initialize target_food attribute
+        self.target_water = None  # Initialize target_water attribute
+
+        if traits is None:
+            self.traits = generate_random_traits()
+        else:
+            self.traits = apply_random_mutation(traits)
+
+        if name is None:
+            self.name = generate_random_name()
+        else:
+            self.name = name
+
+        self.fur_color = self.traits["fur_color"]
+        self.eye_color = self.traits["eye_color"]
+        self.behavior = self.traits["behavior"]
+        self.breed = self.traits["breed"]
 
     def update(self, foods, waters):
         self.hunger += 0.1
@@ -105,13 +121,13 @@ class Cat(pygame.sprite.Sprite):
             self.direction = random.choice(["left", "right", "up", "down"])
             self.move_counter = random.randint(30, 100)
 
-            if self.personality == "lazy":
+            if self.behavior == "lazy":
                 self.rest_counter = random.randint(50, 100)
-            elif self.personality == "active":
+            elif self.behavior == "active":
                 self.rest_counter = random.randint(10, 20)
-            elif self.personality == "curious":
+            elif self.behavior == "curious":
                 self.rest_counter = random.randint(20, 40)
-            elif self.personality == "timid":
+            elif self.behavior == "timid":
                 self.rest_counter = random.randint(40, 60)
         else:
             self.move_counter -= 1
