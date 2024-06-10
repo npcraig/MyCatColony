@@ -15,6 +15,10 @@ from inventory import Inventory
 from game_save_load import save_game, load_game
 from math import sin, cos, radians
 from traits import inherit_traits
+from achievements import Achievements
+from fundraising import Fundraising, FundraisingEvent
+from cat_cafe import CatCafe
+from educational_tips import EducationalTips
 
 # Initialize Pygame
 pygame.init()
@@ -42,6 +46,18 @@ weather_manager = WeatherManager()
 # Initialize inventory
 inventory = Inventory()
 
+# Initialize achievements
+achievements = Achievements()
+
+# Initialize fundraising
+fundraising = Fundraising()
+
+# Initialize cat café
+cat_cafe = CatCafe()
+
+# Initialize educational tips
+educational_tips = EducationalTips()
+
 # Sprite groups
 all_sprites = pygame.sprite.Group()
 cats = pygame.sprite.Group()
@@ -65,6 +81,9 @@ def create_new_cat():
         new_cat = Cat(cat_images, shelters)
         all_sprites.add(new_cat)
         cats.add(new_cat)
+        achievements.unlock("First Cat")
+        if len(cats) == 10:
+            achievements.unlock("Ten Cats")
 
 # Breeding function
 def breed_cats(cat1, cat2):
@@ -79,11 +98,19 @@ def put_up_for_adoption(cat):
     cats.remove(cat)
     all_sprites.remove(cat)
 
+# Define available fundraising events
+fundraising_events = [
+    FundraisingEvent("Bake Sale", 60, 2),  # duration 60 seconds, $2 per second
+    FundraisingEvent("Charity Run", 120, 1.5),  # duration 120 seconds, $1.5 per second
+    FundraisingEvent("Community Auction", 180, 3),  # duration 180 seconds, $3 per second
+]
+
 # Main game loop
 running = True
 paused = False
 clock = pygame.time.Clock()
 selected_cat = None  # Variable to store the selected cat
+fundraising_menu_open = False  # Variable to track if the fundraising menu is open
 
 # Time speed settings
 time_speeds = [0.5, 1, 2, 3]
@@ -111,13 +138,20 @@ button_rects = [
     pygame.Rect(1340, top_margin, button_width, button_height),  # Button for saving game
     pygame.Rect(1560, top_margin, button_width, button_height),   # Button for loading game
     pygame.Rect(1780, top_margin, button_width, button_height),   # Button for breeding cats
-    pygame.Rect(1780, top_margin + button_height + button_spacing, button_width, button_height)  # Button for putting cats up for adoption
+    pygame.Rect(1780, top_margin + button_height + button_spacing, button_width, button_height),  # Button for putting cats up for adoption
+    pygame.Rect(1780, top_margin + 2 * (button_height + button_spacing), button_width, button_height)  # Button for organizing fundraising event
+]
+
+fundraising_event_button_rects = [
+    pygame.Rect(20, SCREEN_HEIGHT // 2, button_width, button_height),
+    pygame.Rect(240, SCREEN_HEIGHT // 2, button_width, button_height),
+    pygame.Rect(460, SCREEN_HEIGHT // 2, button_width, button_height),
 ]
 
 # Assign buttons to variables for easy access
 (feed_button_rect, water_button_rect, shelter_button_rect, clean_button_rect, heal_button_rect, 
  buy_food_button_rect, buy_water_button_rect, gather_resources_button_rect, 
- earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect, adopt_button_rect) = button_rects
+ earn_money_button_rect, pause_button_rect, time_speed_button_rect, save_button_rect, load_button_rect, breed_button_rect, adopt_button_rect, fundraising_button_rect) = button_rects
 
 # Random event timer
 event_timer = 0
@@ -154,67 +188,81 @@ while running:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = event.pos
-            if check_button_click(feed_button_rect, mouse_pos):
-                if inventory.food > 0:
-                    inventory.food -= 1
-                    new_food = Food(player.rect.x, player.rect.y, food_image)
-                    all_sprites.add(new_food)
-                    foods.add(new_food)
-            elif check_button_click(water_button_rect, mouse_pos):
-                if inventory.water > 0:
-                    inventory.water -= 1
-                    new_water = Water(player.rect.x, player.rect.y, water_image)
-                    all_sprites.add(new_water)
-                    waters.add(new_water)
-            elif check_button_click(shelter_button_rect, mouse_pos):
-                x, y = player.rect.x, player.rect.y
-                shelter = Shelter(x, y, shelter_images)
-                all_sprites.add(shelter)
-                shelters.add(shelter)
-            elif check_button_click(clean_button_rect, mouse_pos):
-                for cat in cats:
-                    cat.clean()
-            elif check_button_click(heal_button_rect, mouse_pos):
-                for cat in cats:
-                    cat.heal()
-            elif check_button_click(buy_food_button_rect, mouse_pos):
-                if inventory.spend_money(10):  # Assume each food costs $10
-                    inventory.add_food(1)
-            elif check_button_click(buy_water_button_rect, mouse_pos):
-                if inventory.spend_money(5):  # Assume each water costs $5
-                    inventory.add_water(1)
-            elif check_button_click(gather_resources_button_rect, mouse_pos):
-                # Implement gathering resources logic
-                pass
-            elif check_button_click(earn_money_button_rect, mouse_pos):
-                inventory.earn_money(20)  # Example of earning money
-            elif check_button_click(pause_button_rect, mouse_pos):
-                paused = not paused
-            elif check_button_click(time_speed_button_rect, mouse_pos):
-                current_time_speed_index = (current_time_speed_index + 1) % len(time_speeds)
-                time_speed = time_speeds[current_time_speed_index]
-            elif check_button_click(save_button_rect, mouse_pos):
-                save_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager)
-            elif check_button_click(load_button_rect, mouse_pos):
-                load_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager, cat_images, shelter_images, food_image, water_image)
-            elif check_button_click(breed_button_rect, mouse_pos):
-                # Select two random cats to breed
-                if len(cats) >= 2:
-                    cat1, cat2 = random.sample(cats.sprites(), 2)
-                    breed_cats(cat1, cat2)
-            elif check_button_click(adopt_button_rect, mouse_pos) and selected_cat:
-                put_up_for_adoption(selected_cat)
-            else:
-                # Check for clicks on cats
-                for cat in cats:
-                    if cat.rect.collidepoint(mouse_pos):
-                        selected_cat = cat
+            if fundraising_menu_open:
+                # Check for clicks on fundraising event buttons
+                for i, rect in enumerate(fundraising_event_button_rects):
+                    if check_button_click(rect, mouse_pos):
+                        fundraising.start_event(fundraising_events[i])
+                        fundraising_menu_open = False
                         break
+            else:
+                if check_button_click(feed_button_rect, mouse_pos):
+                    if inventory.food > 0:
+                        inventory.food -= 1
+                        new_food = Food(player.rect.x, player.rect.y, food_image)
+                        all_sprites.add(new_food)
+                        foods.add(new_food)
+                elif check_button_click(water_button_rect, mouse_pos):
+                    if inventory.water > 0:
+                        inventory.water -= 1
+                        new_water = Water(player.rect.x, player.rect.y, water_image)
+                        all_sprites.add(new_water)
+                        waters.add(new_water)
+                elif check_button_click(shelter_button_rect, mouse_pos):
+                    x, y = player.rect.x, player.rect.y
+                    shelter = Shelter(x, y, shelter_images)
+                    all_sprites.add(shelter)
+                    shelters.add(shelter)
+                    achievements.unlock("First Shelter")
+                elif check_button_click(clean_button_rect, mouse_pos):
+                    for cat in cats:
+                        cat.clean()
+                elif check_button_click(heal_button_rect, mouse_pos):
+                    for cat in cats:
+                        cat.heal()
+                elif check_button_click(buy_food_button_rect, mouse_pos):
+                    if inventory.spend_money(10):  # Assume each food costs $10
+                        inventory.add_food(1)
+                        if inventory.money >= 100:
+                            achievements.unlock("Hundred Dollars")
+                elif check_button_click(buy_water_button_rect, mouse_pos):
+                    if inventory.spend_money(5):  # Assume each water costs $5
+                        inventory.add_water(1)
+                elif check_button_click(gather_resources_button_rect, mouse_pos):
+                    # Implement gathering resources logic
+                    pass
+                elif check_button_click(earn_money_button_rect, mouse_pos):
+                    inventory.earn_money(20)  # Example of earning money
+                elif check_button_click(pause_button_rect, mouse_pos):
+                    paused = not paused
+                elif check_button_click(time_speed_button_rect, mouse_pos):
+                    current_time_speed_index = (current_time_speed_index + 1) % len(time_speeds)
+                    time_speed = time_speeds[current_time_speed_index]
+                elif check_button_click(save_button_rect, mouse_pos):
+                    save_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager)
+                elif check_button_click(load_button_rect, mouse_pos):
+                    load_game('savegame.json', player, cats, shelters, foods, waters, inventory, weather_manager, cat_images, shelter_images, food_image, water_image)
+                elif check_button_click(breed_button_rect, mouse_pos):
+                    # Select two random cats to breed
+                    if len(cats) >= 2:
+                        cat1, cat2 = random.sample(cats.sprites(), 2)
+                        breed_cats(cat1, cat2)
+                elif check_button_click(adopt_button_rect, mouse_pos) and selected_cat:
+                    put_up_for_adoption(selected_cat)
+                elif check_button_click(fundraising_button_rect, mouse_pos):
+                    fundraising_menu_open = True
+                else:
+                    # Check for clicks on cats
+                    for cat in cats:
+                        if cat.rect.collidepoint(mouse_pos):
+                            selected_cat = cat
+                            break
 
     if not paused:
         # Update the game
         player.update(keys)
         cats.update(foods, waters, cats)
+        fundraising.update_events(clock.get_time() * 0.001 * time_speed)  # Convert milliseconds to seconds
 
         # Handle random events
         event_timer += clock.get_time()
@@ -248,10 +296,16 @@ while running:
     # Draw UI buttons
     button_labels = ["Feed Cats", "Water Cats", "Build Shelter", "Clean Cats", "Heal Cats",
                      "Buy Food", "Buy Water", "Gather Resources", "Earn Money", 
-                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats", "Adopt Cat"]
+                     "Pause" if not paused else "Resume", f"Speed: {time_speed}x", "Save Game", "Load Game", "Breed Cats", "Adopt Cat", "Fundraising"]
 
     for rect, label in zip(button_rects, button_labels):
         draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
+
+    if fundraising_menu_open:
+        # Draw fundraising menu
+        menu_labels = ["Bake Sale", "Charity Run", "Community Auction"]
+        for rect, label in zip(fundraising_event_button_rects, menu_labels):
+            draw_button(screen, rect, label, BUTTON_COLOR, BUTTON_TEXT_COLOR)
 
     # Display random event message
     if event_message:
@@ -263,6 +317,10 @@ while running:
     font = pygame.font.Font(None, 36)
     inventory_text = font.render(inventory.get_status(), True, BLACK)
     screen.blit(inventory_text, (20, 180))
+
+    # Display fundraising funds
+    funds_text = font.render(f"Funds: ${fundraising.get_funds():.2f}", True, BLACK)
+    screen.blit(funds_text, (20, 220))
 
     # Draw analog clock
     draw_analog_clock(screen, 1120 + button_width // 2, 180 + button_height // 2, 40, weather_manager.time_of_day)
@@ -283,6 +341,11 @@ while running:
             text_surface = font.render(line, True, BLACK)
             screen.blit(text_surface, (panel_x + 10, y_offset))
             y_offset += 30
+
+    # Display current educational tip
+    font = pygame.font.Font(None, 24)
+    tip_text = font.render(f"Tip: {educational_tips.get_current_tip()}", True, BLACK)
+    screen.blit(tip_text, (20, SCREEN_HEIGHT - 30))
 
     # Update the display
     pygame.display.flip()
